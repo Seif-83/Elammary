@@ -63,9 +63,15 @@ export const getCustomerDetail = async (id) => {
   return { ...customer, orders };
 };
 
+import toast from 'react-hot-toast';
+
 const withTimeout = (promise, ms = 8000) => {
   return Promise.race([
-    promise,
+    promise.catch(err => {
+      console.error("Firebase Auth/Rule Error:", err);
+      toast.error(`Firebase Error: ${err.message}`, { duration: 8000 });
+      throw err;
+    }),
     new Promise((_, reject) => setTimeout(() => reject(new Error('Network timeout: Please check your connection or try again.')), ms))
   ]);
 };
