@@ -63,34 +63,38 @@ export const getCustomerDetail = async (id) => {
   return { ...customer, orders };
 };
 
+const withTimeout = (promise, ms = 8000) => {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => setTimeout(() => reject(new Error('Network timeout: Please check your connection or try again.')), ms))
+  ]);
+};
+
 export const addCustomer = async (data) => {
-  return addDoc(collection(db, 'customers'), {
+  return withTimeout(addDoc(collection(db, 'customers'), {
     ...data,
     total_purchases: 0,
     tier: data.tier || 'regular',
     created_at: serverTimestamp(),
     updated_at: serverTimestamp()
-  });
+  }));
 };
 
 export const updateCustomer = async (id, data) => {
   const docRef = doc(db, 'customers', id);
-  return updateDoc(docRef, {
+  return withTimeout(updateDoc(docRef, {
     ...data,
     updated_at: serverTimestamp()
-  });
+  }));
 };
 
 export const deleteCustomer = async (id) => {
   const batch = writeBatch(db);
   batch.delete(doc(db, 'customers', id));
-  
-  // Also delete their orders
   const ordersQ = query(collection(db, 'orders'), where('customer_id', '==', id));
   const ordersSnap = await getDocs(ordersQ);
   ordersSnap.docs.forEach(d => batch.delete(d.ref));
-  
-  return batch.commit();
+  return withTimeout(batch.commit());
 };
 
 // -- ORDERS --
@@ -102,8 +106,6 @@ export const getOrders = async () => {
 
 export const addOrder = async (orderData) => {
   const batch = writeBatch(db);
-  
-  // 1. Create Order
   const orderRef = doc(collection(db, 'orders'));
   batch.set(orderRef, {
     ...orderData,
@@ -111,7 +113,6 @@ export const addOrder = async (orderData) => {
     updated_at: serverTimestamp()
   });
   
-  // 2. If delivered, update customer total and tier
   if (orderData.status === 'delivered') {
     const custRef = doc(db, 'customers', orderData.customer_id);
     const snap = await getDoc(custRef);
@@ -124,17 +125,16 @@ export const addOrder = async (orderData) => {
       });
     }
   }
-  
-  return batch.commit();
+  return withTimeout(batch.commit());
 };
 
 export const updateOrder = async (id, data) => {
   const docRef = doc(db, 'orders', id);
-  return updateDoc(docRef, { ...data, updated_at: serverTimestamp() });
+  return withTimeout(updateDoc(docRef, { ...data, updated_at: serverTimestamp() }));
 };
 
 export const deleteOrder = async (id) => {
-  return deleteDoc(doc(db, 'orders', id));
+  return withTimeout(deleteDoc(doc(db, 'orders', id)));
 };
 
 // -- PRODUCTS --
@@ -145,20 +145,20 @@ export const getProducts = async () => {
 };
 
 export const addProduct = async (data) => {
-  return addDoc(collection(db, 'products'), {
+  return withTimeout(addDoc(collection(db, 'products'), {
     ...data,
     created_at: serverTimestamp(),
     updated_at: serverTimestamp()
-  });
+  }));
 };
 
 export const updateProduct = async (id, data) => {
   const docRef = doc(db, 'products', id);
-  return updateDoc(docRef, { ...data, updated_at: serverTimestamp() });
+  return withTimeout(updateDoc(docRef, { ...data, updated_at: serverTimestamp() }));
 };
 
 export const deleteProduct = async (id) => {
-  return deleteDoc(doc(db, 'products', id));
+  return withTimeout(deleteDoc(doc(db, 'products', id)));
 };
 
 // -- DASHBOARD --

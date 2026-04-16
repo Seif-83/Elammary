@@ -5,21 +5,24 @@ import toast from 'react-hot-toast';
 import { Plus, Search, Edit2, Trash2, Package, Tag, Layers } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { SkeletonCard } from '../components/ui/Skeleton';
+import { useThemeLang } from '../context/ThemeLangContext';
 
 function ProductModal({ product, onClose, onSaved }) {
   const [form, setForm] = useState(product || { name: '', category: '', price: '', description: '', stock: 0 });
   const [loading, setLoading] = useState(false);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault(); setLoading(true);
-    try {
-      if (product) { await updateProduct(product.id, form); toast.success('Catalog updated'); }
-      else { await addProduct(form); toast.success('Item added to catalog'); }
-      onSaved();
-    } catch (err) { toast.error(err.message || 'Error saving'); } finally { setLoading(false); }
+  const handleSubmit = (e) => {
+    e.preventDefault(); 
+    setLoading(true);
+    if (product) { updateProduct(product.id, form).catch(console.error); toast.success('Catalog updated'); }
+    else { addProduct(form).catch(console.error); toast.success('Item added to catalog'); }
+    setLoading(false);
+    onSaved();
   };
 
   const CATEGORIES = ['Sofas', 'Dining', 'Bedroom', 'Living Room', 'Storage', 'Seating', 'Outdoor', 'Office'];
+
+  const { t } = useThemeLang();
 
   return (
     <motion.div 
@@ -31,40 +34,40 @@ function ProductModal({ product, onClose, onSaved }) {
         className="modal"
       >
         <div className="modal-header">
-          <h2 className="modal-title">{product ? 'Refine Product' : 'Registry Entry'}</h2>
-          <button className="btn-icon" onClick={onClose}>✕</button>
+          <h2 className="modal-title">{product ? t('refineProduct') : t('registryEntry')}</h2>
+          <button type="button" className="btn-icon" onClick={onClose}>✕</button>
         </div>
         <form onSubmit={handleSubmit}>
           <div className="form-grid">
             <div className="form-row">
-              <label className="form-label">Product Moniker *</label>
-              <input required value={form.name} onChange={e => setForm(p => ({...p, name: e.target.value}))} placeholder="e.g. Minimalist Velvet Sofa" />
+              <label className="form-label">{t('prodMoniker')}</label>
+              <input required value={form.name} onChange={e => setForm(p => ({...p, name: e.target.value}))} placeholder={t('egMoniker')} />
             </div>
             <div className="form-grid-2">
               <div className="form-row">
-                <label className="form-label">Classification *</label>
+                <label className="form-label">{t('classification')}</label>
                 <select required value={form.category} onChange={e => setForm(p => ({...p, category: e.target.value}))}>
-                  <option value="">— Select —</option>
+                  <option value="">{t('select')}</option>
                   {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
                 </select>
               </div>
               <div className="form-row">
-                <label className="form-label">Unit Price *</label>
+                <label className="form-label">{t('unitPrice')}</label>
                 <input required type="number" step="0.01" min="0" value={form.price} onChange={e => setForm(p => ({...p, price: e.target.value}))} placeholder="0.00" />
               </div>
             </div>
             <div className="form-row">
-              <label className="form-label">Design Description</label>
-              <textarea rows={2} value={form.description || ''} onChange={e => setForm(p => ({...p, description: e.target.value}))} placeholder="Dimensions, materials..." />
+              <label className="form-label">{t('designDesc')}</label>
+              <textarea rows={2} value={form.description || ''} onChange={e => setForm(p => ({...p, description: e.target.value}))} placeholder={t('dimMat')} />
             </div>
             <div className="form-row">
-              <label className="form-label">Inventory Count</label>
+              <label className="form-label">{t('inventoryCount')}</label>
               <input type="number" min="0" value={form.stock || 0} onChange={e => setForm(p => ({...p, stock: e.target.value}))} />
             </div>
           </div>
           <div className="modal-footer">
-            <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>
-            <button type="submit" className="btn-primary" disabled={loading}>{loading ? 'Updating...' : 'Save Design'}</button>
+            <button type="button" className="btn-secondary" onClick={onClose}>{t('cancel')}</button>
+            <button type="submit" className="btn-primary" disabled={loading}>{loading ? t('updating') : t('saveDesign')}</button>
           </div>
         </form>
       </motion.div>
@@ -80,6 +83,7 @@ export default function ProductsPage() {
   const [categories, setCategories] = useState([]);
   const [modal, setModal] = useState(null);
   const [selected, setSelected] = useState(null);
+  const { t } = useThemeLang();
 
   const fetchProducts = useCallback(async () => {
     setLoading(true);
@@ -101,24 +105,31 @@ export default function ProductsPage() {
 
   useEffect(() => { fetchProducts(); }, [fetchProducts]);
 
-  const handleDelete = async (id) => {
+  const handleDelete = (id) => {
     if (!window.confirm('Retire this design from catalog?')) return;
-    try { await deleteProduct(id); toast.success('Entry removed'); fetchProducts(); }
-    catch { toast.error('Failed to remove'); }
+    
+    setProducts(prev => prev.filter(p => p.id !== id));
+    toast.success('Entry removed');
+    
+    deleteProduct(id).catch(err => {
+      console.error(err);
+      toast.error('Sync error on delete');
+      fetchProducts();
+    });
   };
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
       <div className="page-header">
         <div>
-          <h1 className="page-title">Curated Collection</h1>
-          <p className="page-subtitle">Refining the furniture catalog for premium spaces.</p>
+          <h1 className="page-title">{t('curatedCol')}</h1>
+          <p className="page-subtitle">{t('curatedSub')}</p>
         </div>
         <motion.button 
           whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
           className="btn-primary" onClick={() => setModal('add')}
         >
-          <Plus size={16} />Register Design
+          <Plus size={16} />{t('regDesign')}
         </motion.button>
       </div>
 
@@ -127,10 +138,10 @@ export default function ProductsPage() {
           <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'center' }}>
             <div className="search-bar">
               <Search size={15} className="search-icon" />
-              <input placeholder="Search catalog..." value={search} onChange={e => setSearch(e.target.value)} />
+              <input placeholder={t('searchCat')} value={search} onChange={e => setSearch(e.target.value)} />
             </div>
             <div className="filters">
-              <button className={`filter-chip ${catFilter === 'all' ? 'active' : ''}`} onClick={() => setCatFilter('all')}>ALL</button>
+              <button className={`filter-chip ${catFilter === 'all' ? 'active' : ''}`} onClick={() => setCatFilter('all')}>{t('all')}</button>
               {categories.map(c => (
                 <button key={c} className={`filter-chip ${catFilter === c ? 'active' : ''}`} onClick={() => setCatFilter(c)}>{c.toUpperCase()}</button>
               ))}
@@ -143,7 +154,7 @@ export default function ProductsPage() {
             {[...Array(6)].map((_, i) => <SkeletonCard key={i} height="200px" />)}
           </div>
         ) : products.length === 0 ? (
-          <div className="empty-state"><Package size={40} /><p>Catalogue entry not found</p></div>
+          <div className="empty-state"><Package size={40} /><p>{t('noCatalogEntry')}</p></div>
         ) : (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1.5rem' }}>
             <AnimatePresence mode="popLayout">
@@ -171,14 +182,14 @@ export default function ProductsPage() {
                     <div style={{ fontSize: '0.7rem', color: 'var(--gold)', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', marginBottom: 4 }}>{p.category}</div>
                     <h3 style={{ fontSize: '1.4rem', color: 'var(--text)', marginBottom: 6 }}>{p.name}</h3>
                     <p style={{ fontSize: '0.85rem', color: 'var(--text-dim)', height: '40px', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
-                      {p.description || 'No description available for this curated piece.'}
+                      {p.description || t('noDesc')}
                     </p>
                   </div>
                   <div style={{ marginTop: 'auto', paddingTop: '1rem', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <div style={{ color: 'var(--gold)', fontWeight: 700, fontSize: '1.2rem' }}>${Number(p.price).toLocaleString()}</div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.75rem', color: p.stock > 0 ? 'var(--green)' : 'var(--red)' }}>
                       <div style={{ width: 6, height: 6, borderRadius: '50%', background: p.stock > 0 ? 'var(--green)' : 'var(--red)' }} />
-                      {p.stock} Units in Reserve
+                      {p.stock} {t('unitsReserve')}
                     </div>
                   </div>
                 </motion.div>

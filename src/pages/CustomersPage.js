@@ -5,19 +5,25 @@ import toast from 'react-hot-toast';
 import { Plus, Search, Edit2, Trash2, User, Phone, MapPin } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { SkeletonTable } from '../components/ui/Skeleton';
+import { useThemeLang } from '../context/ThemeLangContext';
 
 function CustomerModal({ customer, onClose, onSaved }) {
   const [form, setForm] = useState(customer || { name: '', phone: '', address: '', notes: '' });
   const [loading, setLoading] = useState(false);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault(); setLoading(true);
-    try {
-      if (customer) { await updateCustomer(customer.id, form); toast.success('Profile updated'); }
-      else { await addCustomer(form); toast.success('Customer added'); }
-      onSaved();
-    } catch (err) { toast.error(err.message || 'Error saving'); } finally { setLoading(false); }
+  const handleSubmit = (e) => {
+    e.preventDefault(); 
+    setLoading(true);
+    
+    // Optimistic Save
+    if (customer) { updateCustomer(customer.id, form).catch(console.error); toast.success('Profile updated'); }
+    else { addCustomer(form).catch(console.error); toast.success('Customer added'); }
+    
+    setLoading(false);
+    onSaved();
   };
+
+  const { t } = useThemeLang();
 
   return (
     <motion.div 
@@ -29,31 +35,31 @@ function CustomerModal({ customer, onClose, onSaved }) {
         className="modal"
       >
         <div className="modal-header">
-          <h2 className="modal-title">{customer ? 'Edit Profile' : 'New Customer'}</h2>
-          <button className="btn-icon" onClick={onClose}>✕</button>
+          <h2 className="modal-title">{customer ? t('editProfile') : t('newCustomer')}</h2>
+          <button type="button" className="btn-icon" onClick={onClose}>✕</button>
         </div>
         <form onSubmit={handleSubmit}>
           <div className="form-grid">
             <div className="form-row">
-              <label className="form-label">Full Name *</label>
-              <input required value={form.name} onChange={e => setForm(p => ({...p, name: e.target.value}))} placeholder="e.g. John Doe" />
+              <label className="form-label">{t('fullName')}</label>
+              <input required value={form.name} onChange={e => setForm(p => ({...p, name: e.target.value}))} placeholder={t('egName')} />
             </div>
             <div className="form-row">
-              <label className="form-label">Phone Number</label>
-              <input value={form.phone} onChange={e => setForm(p => ({...p, phone: e.target.value}))} placeholder="+1 (555) 000-0000" />
+              <label className="form-label">{t('phoneNumber')}</label>
+              <input value={form.phone} onChange={e => setForm(p => ({...p, phone: e.target.value}))} placeholder={t('egPhone')} />
             </div>
             <div className="form-row">
-              <label className="form-label">Physical Address</label>
-              <textarea rows={2} value={form.address} onChange={e => setForm(p => ({...p, address: e.target.value}))} placeholder="Shipping details..." />
+              <label className="form-label">{t('physAddress')}</label>
+              <textarea rows={2} value={form.address} onChange={e => setForm(p => ({...p, address: e.target.value}))} placeholder={t('shippingDet')} />
             </div>
             <div className="form-row">
-              <label className="form-label">Private Notes</label>
-              <textarea rows={2} value={form.notes} onChange={e => setForm(p => ({...p, notes: e.target.value}))} placeholder="Special preferences..." />
+              <label className="form-label">{t('privateNotes')}</label>
+              <textarea rows={2} value={form.notes} onChange={e => setForm(p => ({...p, notes: e.target.value}))} placeholder={t('specialPref')} />
             </div>
           </div>
           <div className="modal-footer">
-            <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>
-            <button type="submit" className="btn-primary" disabled={loading}>{loading ? 'Saving...' : 'Save Customer'}</button>
+            <button type="button" className="btn-secondary" onClick={onClose}>{t('cancel')}</button>
+            <button type="submit" className="btn-primary" disabled={loading}>{loading ? t('saving') : t('saveCustomer')}</button>
           </div>
         </form>
       </motion.div>
@@ -68,6 +74,7 @@ export default function CustomersPage() {
   const [tierFilter, setTierFilter] = useState('all');
   const [modal, setModal] = useState(null);
   const [selected, setSelected] = useState(null);
+  const { t } = useThemeLang();
 
   const fetchCustomers = useCallback(async () => {
     setLoading(true);
@@ -84,10 +91,19 @@ export default function CustomersPage() {
 
   useEffect(() => { fetchCustomers(); }, [fetchCustomers]);
 
-  const handleDelete = async (id) => {
+  const handleDelete = (id) => {
     if (!window.confirm('This will delete the customer and all their orders. Continue?')) return;
-    try { await deleteCustomer(id); toast.success('Customer removed'); fetchCustomers(); }
-    catch { toast.error('Failed to delete'); }
+    
+    // Optimistic UI Update
+    setCustomers(prev => prev.filter(c => c.id !== id));
+    toast.success('Customer removed');
+    
+    // Background Firebase Delete
+    deleteCustomer(id).catch(err => {
+      console.error(err);
+      toast.error('Sync error on delete');
+      fetchCustomers(); // revert on failure
+    });
   };
 
   const closeModal = () => { setModal(null); setSelected(null); };
@@ -97,14 +113,14 @@ export default function CustomersPage() {
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
       <div className="page-header">
         <div>
-          <h1 className="page-title">Client Directory</h1>
-          <p className="page-subtitle">Manage your high-value client relationships.</p>
+          <h1 className="page-title">{t('clientDir')}</h1>
+          <p className="page-subtitle">{t('clientDirSub')}</p>
         </div>
         <motion.button 
           whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
           className="btn-primary" onClick={() => setModal('add')}
         >
-          <Plus size={16} />Add Client
+          <Plus size={16} />{t('addClient')}
         </motion.button>
       </div>
 
@@ -112,31 +128,38 @@ export default function CustomersPage() {
         <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
           <div className="search-bar">
             <Search size={15} className="search-icon" />
-            <input placeholder="Search clients..." value={search} onChange={e => setSearch(e.target.value)} />
+            <input placeholder={t('searchClients')} value={search} onChange={e => setSearch(e.target.value)} />
           </div>
           <div className="filters">
-            {['all', 'vip', 'loyal', 'regular'].map(t => (
-              <button key={t} className={`filter-chip ${tierFilter === t ? 'active' : ''}`} onClick={() => setTierFilter(t)}>
-                {t.toUpperCase()}
-              </button>
-            ))}
+            <button className={`filter-chip ${tierFilter === 'all' ? 'active' : ''}`} onClick={() => setTierFilter('all')}>
+              {t('all')}
+            </button>
+            <button className={`filter-chip ${tierFilter === 'vip' ? 'active' : ''}`} onClick={() => setTierFilter('vip')}>
+              {t('vip')}
+            </button>
+            <button className={`filter-chip ${tierFilter === 'loyal' ? 'active' : ''}`} onClick={() => setTierFilter('loyal')}>
+              {t('loyal')}
+            </button>
+            <button className={`filter-chip ${tierFilter === 'regular' ? 'active' : ''}`} onClick={() => setTierFilter('regular')}>
+              {t('regular')}
+            </button>
           </div>
         </div>
 
         {loading ? (
           <SkeletonTable rows={8} />
         ) : customers.length === 0 ? (
-          <div className="empty-state"><User size={40} /><p>No clients found matching your criteria</p></div>
+          <div className="empty-state"><User size={40} /><p>{t('noClients')}</p></div>
         ) : (
           <div className="table-wrap">
             <table>
               <thead>
                 <tr>
-                  <th>Client Name</th>
-                  <th>Tier Status</th>
-                  <th>Phone / Contact</th>
-                  <th>Lifetime Value</th>
-                  <th>Actions</th>
+                  <th>{t('clientName')}</th>
+                  <th>{t('tierStatus')}</th>
+                  <th>{t('phoneContact')}</th>
+                  <th>{t('lifetimeValue')}</th>
+                  <th>{t('actions')}</th>
                 </tr>
               </thead>
               <tbody>

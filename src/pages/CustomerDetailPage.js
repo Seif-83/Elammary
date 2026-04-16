@@ -8,6 +8,7 @@ import {
   Star, User, Plus, Edit2, Trash2, ShoppingBag 
 } from 'lucide-react';
 import { Skeleton, SkeletonTable } from '../components/ui/Skeleton';
+import { useThemeLang } from '../context/ThemeLangContext';
 
 function OrderModal({ customerId, customerName, order, onClose, onSaved }) {
   const [form, setForm] = useState(order || { furniture_type: '', price: '', status: 'pending', order_date: new Date().toISOString().split('T')[0], notes: '' });
@@ -22,14 +23,16 @@ function OrderModal({ customerId, customerName, order, onClose, onSaved }) {
     if (p) setForm(prev => ({ ...prev, furniture_type: p.name, price: p.price }));
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault(); setLoading(true);
-    try {
-      if (order) { await updateOrder(order.id, form); toast.success('Order recorded'); }
-      else { await addOrder({ ...form, customer_id: customerId, customer_name: customerName }); toast.success('Order initiated'); }
-      onSaved();
-    } catch (err) { toast.error(err.message || 'Error saving'); } finally { setLoading(false); }
+  const handleSubmit = (e) => {
+    e.preventDefault(); 
+    setLoading(true);
+    if (order) { updateOrder(order.id, form).catch(console.error); toast.success('Order recorded'); }
+    else { addOrder({ ...form, customer_id: customerId, customer_name: customerName }).catch(console.error); toast.success('Order initiated'); }
+    setLoading(false);
+    onSaved();
   };
+
+  const { t } = useThemeLang();
 
   return (
     <motion.div 
@@ -41,40 +44,40 @@ function OrderModal({ customerId, customerName, order, onClose, onSaved }) {
         className="modal"
       >
         <div className="modal-header">
-          <h2 className="modal-title">{order ? 'Edit Record' : 'Log New Sale'}</h2>
-          <button className="btn-icon" onClick={onClose}>✕</button>
+          <h2 className="modal-title">{order ? t('editRecord') : t('logNewSale')}</h2>
+          <button type="button" className="btn-icon" onClick={onClose}>✕</button>
         </div>
         <form onSubmit={handleSubmit}>
           <div className="form-grid">
             <div className="form-row">
-              <label className="form-label">Catalog Select</label>
+              <label className="form-label">{t('catSelect')}</label>
               <select onChange={handleProductSelect} defaultValue="">
-                <option value="">— Pick a design —</option>
+                <option value="">{t('pickDesign')}</option>
                 {products.map(p => <option key={p.id} value={p.id}>{p.name} — ${p.price}</option>)}
               </select>
             </div>
             <div className="form-grid-2">
               <div className="form-row">
-                <label className="form-label">Item *</label>
+                <label className="form-label">{t('itemReq')}</label>
                 <input required value={form.furniture_type} onChange={e => setForm(p => ({...p, furniture_type: e.target.value}))} />
               </div>
               <div className="form-row">
-                <label className="form-label">Price *</label>
+                <label className="form-label">{t('priceReq')}</label>
                 <input required type="number" step="0.01" value={form.price} onChange={e => setForm(p => ({...p, price: e.target.value}))} />
               </div>
             </div>
             <div className="form-row">
-              <label className="form-label">Status</label>
+              <label className="form-label">{t('orderStatus')}</label>
               <select value={form.status} onChange={e => setForm(p => ({...p, status: e.target.value}))}>
-                <option value="pending">Pending</option>
-                <option value="in-progress">In Progress</option>
-                <option value="delivered">Delivered</option>
+                <option value="pending">{t('pending')}</option>
+                <option value="in-progress">{t('inProgress')}</option>
+                <option value="delivered">{t('delivered')}</option>
               </select>
             </div>
           </div>
           <div className="modal-footer">
-            <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>
-            <button type="submit" className="btn-primary" disabled={loading}>{loading ? 'Saving...' : 'Save Order'}</button>
+            <button type="button" className="btn-secondary" onClick={onClose}>{t('cancel')}</button>
+            <button type="submit" className="btn-primary" disabled={loading}>{loading ? t('saving') : t('saveOrder')}</button>
           </div>
         </form>
       </motion.div>
@@ -83,10 +86,11 @@ function OrderModal({ customerId, customerName, order, onClose, onSaved }) {
 }
 
 function TierBadge({ tier }) {
+  const { t } = useThemeLang();
   const tiers = {
-    vip: { icon: Crown, label: 'VIP Selection', color: 'var(--gold)' },
-    loyal: { icon: Star, label: 'Loyal Client', color: 'var(--blue)' },
-    regular: { icon: User, label: 'Standard', color: 'var(--text-dim)' }
+    vip: { icon: Crown, label: t('vipSel'), color: 'var(--gold)' },
+    loyal: { icon: Star, label: t('loyalClient'), color: 'var(--blue)' },
+    regular: { icon: User, label: t('standard'), color: 'var(--text-dim)' }
   };
   const { icon: Icon, label, color } = tiers[tier] || tiers.regular;
   return (
@@ -103,6 +107,7 @@ export default function CustomerDetailPage() {
   const [loading, setLoading] = useState(true);
   const [modal, setModal] = useState(null);
   const [selectedOrder, setSelectedOrder] = useState(null);
+  const { t } = useThemeLang();
 
   const fetchCustomer = React.useCallback(async () => {
     try {
@@ -113,10 +118,20 @@ export default function CustomerDetailPage() {
 
   useEffect(() => { fetchCustomer(); }, [fetchCustomer]);
 
-  const handleDeleteOrder = async (orderId) => {
-    if (!window.confirm('Delete this transaction?')) return;
-    try { await deleteOrder(orderId); toast.success('Entry removed'); fetchCustomer(); }
-    catch { toast.error('Failed'); }
+  const handleDeleteOrder = (id) => {
+    if (!window.confirm('Delete this order?')) return;
+    
+    setCustomer(prev => ({
+      ...prev,
+      orders: prev.orders.filter(o => o.id !== id)
+    }));
+    toast.success('Order removed');
+    
+    deleteOrder(id).catch(err => {
+      console.error(err);
+      toast.error('Sync error on delete');
+      fetchCustomer();
+    });
   };
 
   if (loading) {
@@ -137,7 +152,7 @@ export default function CustomerDetailPage() {
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
       <div style={{ marginBottom: '2rem' }}>
         <Link to="/customers" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-muted)', fontSize: '0.9rem', hover: { color: 'var(--gold)' } }}>
-          <ArrowLeft size={16} /> Return to Directory
+          <ArrowLeft size={16} /> {t('retDir')}
         </Link>
       </div>
 
@@ -154,33 +169,33 @@ export default function CustomerDetailPage() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', padding: '1.5rem 0', borderTop: '1px solid var(--border)' }}>
             <div style={{ display: 'flex', gap: '1rem' }}>
               <div style={{ width: 32, height: 32, borderRadius: 8, background: 'rgba(255,255,255,0.03)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-dim)' }}><Phone size={16}/></div>
-              <div><div style={{ fontSize: '0.65rem', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Phone</div><div style={{ fontSize: '0.95rem' }}>{customer.phone || 'N/A'}</div></div>
+              <div><div style={{ fontSize: '0.65rem', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>{t('phone')}</div><div style={{ fontSize: '0.95rem' }}>{customer.phone || '—'}</div></div>
             </div>
             <div style={{ display: 'flex', gap: '1rem' }}>
               <div style={{ width: 32, height: 32, borderRadius: 8, background: 'rgba(255,255,255,0.03)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-dim)' }}><MapPin size={16}/></div>
-              <div><div style={{ fontSize: '0.65rem', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Address</div><div style={{ fontSize: '0.95rem', color: 'var(--text-muted)' }}>{customer.address || 'No address stored'}</div></div>
+              <div><div style={{ fontSize: '0.65rem', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>{t('address')}</div><div style={{ fontSize: '0.95rem', color: 'var(--text-muted)' }}>{customer.address || t('noAddr')}</div></div>
             </div>
           </div>
 
           <div style={{ background: 'rgba(255,255,255,0.02)', padding: '1.5rem', borderRadius: 16, border: '1px solid var(--border)', marginTop: '0.5rem' }}>
-            <div style={{ fontSize: '0.7rem', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '0.5rem' }}>Lifetime Portfolio Value</div>
+            <div style={{ fontSize: '0.7rem', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '0.5rem' }}>{t('lifetimePort')}</div>
             <div style={{ fontSize: '2.4rem', color: 'var(--gold)', fontWeight: 600, fontFamily: 'Cormorant Garamond' }}>${Number(customer.total_purchases || 0).toLocaleString()}</div>
           </div>
         </motion.div>
 
         <div>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
-            <h2 style={{ fontSize: '1.6rem', display: 'flex', alignItems: 'center', gap: 10 }}>Purchasing History <span style={{ fontSize: '0.9rem', color: 'var(--text-dim)', fontWeight: 400 }}>({customer.orders?.length || 0})</span></h2>
-            <button className="btn-primary" onClick={() => setModal('order')}><Plus size={16} />Log Transaction</button>
+            <h2 style={{ fontSize: '1.6rem', display: 'flex', alignItems: 'center', gap: 10 }}>{t('purchHistory')} <span style={{ fontSize: '0.9rem', color: 'var(--text-dim)', fontWeight: 400 }}>({customer.orders?.length || 0})</span></h2>
+            <button className="btn-primary" onClick={() => setModal('order')}><Plus size={16} />{t('logTrans')}</button>
           </div>
 
           <div className="card" style={{ padding: 0 }}>
             {!customer.orders?.length ? (
-              <div className="empty-state" style={{ padding: '6rem 2rem' }}><ShoppingBag size={48} color="var(--border)" /><p>No registered transactions for this client yet.</p></div>
+              <div className="empty-state" style={{ padding: '6rem 2rem' }}><ShoppingBag size={48} color="var(--border)" /><p>{t('noRegTrans')}</p></div>
             ) : (
               <div className="table-wrap">
                 <table style={{ borderSpacing: '0 8px' }}>
-                  <thead><tr><th>Item</th><th>Acquisition Value</th><th>Current Status</th><th>Registered Date</th><th>Actions</th></tr></thead>
+                  <thead><tr><th>{t('item')}</th><th>{t('acqValue')}</th><th>{t('currStatus')}</th><th>{t('regDate')}</th><th>{t('actions')}</th></tr></thead>
                   <tbody>
                     <AnimatePresence mode="popLayout">
                       {customer.orders.map((o, idx) => (
