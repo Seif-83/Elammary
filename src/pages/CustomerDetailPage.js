@@ -103,14 +103,14 @@ export default function CustomerDetailPage() {
   const [modal, setModal] = useState(null);
   const [selectedOrder, setSelectedOrder] = useState(null);
 
-  const fetchCustomer = async () => {
+  const fetchCustomer = React.useCallback(async () => {
     try {
       const data = await getCustomerDetail(id);
       setCustomer(data);
     } catch { toast.error('Customer not found'); navigate('/customers'); } finally { setLoading(false); }
-  };
+  }, [id, navigate]);
 
-  useEffect(() => { fetchCustomer(); }, [id]);
+  useEffect(() => { fetchCustomer(); }, [fetchCustomer]);
 
   const handleDeleteOrder = async (orderId) => {
     if (!window.confirm('Delete this order?')) return;

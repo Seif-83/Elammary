@@ -9,9 +9,7 @@ import {
   query, 
   where, 
   orderBy, 
-  limit, 
   serverTimestamp,
-  increment,
   writeBatch
 } from 'firebase/firestore';
 import { db } from '../firebase';
@@ -188,7 +186,6 @@ export const getDashboardStats = async () => {
   }));
   
   // Revenue by month (simple mock for now or real logic)
-  const revenueByMonth = []; // Implementation depends on required format
   
   return {
     stats,
