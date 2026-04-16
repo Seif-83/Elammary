@@ -1,8 +1,8 @@
 import React from 'react';
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider, useAuth } from './context/AuthContext';
-import { ThemeLangProvider, useThemeLang } from './context/ThemeLangContext';
+import { ThemeLangProvider } from './context/ThemeLangContext';
 import Layout from './components/layout/Layout';
 import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';

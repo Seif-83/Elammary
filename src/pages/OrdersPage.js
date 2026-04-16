@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getOrders, addOrder, updateOrder, deleteOrder, getCustomers, getProducts } from '../services/db';
 import toast from 'react-hot-toast';
-import { Plus, Search, Edit2, Trash2, ShoppingBag, Filter, Calendar } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, ShoppingBag, Calendar } from 'lucide-react';
 import { SkeletonTable } from '../components/ui/Skeleton';
 import { useThemeLang } from '../context/ThemeLangContext';
 

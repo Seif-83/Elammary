@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getCustomers, addCustomer, updateCustomer, deleteCustomer } from '../services/db';
 import toast from 'react-hot-toast';
-import { Plus, Search, Edit2, Trash2, User, Phone, MapPin } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, User, Phone } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { SkeletonTable } from '../components/ui/Skeleton';
 import { useThemeLang } from '../context/ThemeLangContext';

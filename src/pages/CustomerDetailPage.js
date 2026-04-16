@@ -4,10 +4,10 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { getCustomerDetail, getProducts, addOrder, updateOrder, deleteOrder } from '../services/db';
 import toast from 'react-hot-toast';
 import { 
-  ArrowLeft, Phone, MapPin, FileText, Crown, 
+  ArrowLeft, Phone, MapPin, Crown, 
   Star, User, Plus, Edit2, Trash2, ShoppingBag 
 } from 'lucide-react';
-import { Skeleton, SkeletonTable } from '../components/ui/Skeleton';
+import { Skeleton } from '../components/ui/Skeleton';
 import { useThemeLang } from '../context/ThemeLangContext';
 
 function OrderModal({ customerId, customerName, order, onClose, onSaved }) {

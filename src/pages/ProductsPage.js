@@ -2,8 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getProducts, addProduct, updateProduct, deleteProduct } from '../services/db';
 import toast from 'react-hot-toast';
-import { Plus, Search, Edit2, Trash2, Package, Tag, Layers } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Plus, Search, Edit2, Trash2, Package, Tag } from 'lucide-react';
 import { SkeletonCard } from '../components/ui/Skeleton';
 import { useThemeLang } from '../context/ThemeLangContext';
 

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import { Sofa, Lock, Mail, ArrowRight, Sparkles } from 'lucide-react';
 import toast from 'react-hot-toast';
