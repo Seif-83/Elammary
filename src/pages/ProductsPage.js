@@ -1,7 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { getProducts, addProduct, updateProduct, deleteProduct } from '../services/db';
 import toast from 'react-hot-toast';
-import { Plus, Search, Edit2, Trash2, Package } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, Package, Tag, Layers } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { SkeletonCard } from '../components/ui/Skeleton';
 
 function ProductModal({ product, onClose, onSaved }) {
   const [form, setForm] = useState(product || { name: '', category: '', price: '', description: '', stock: 0 });
@@ -10,8 +13,8 @@ function ProductModal({ product, onClose, onSaved }) {
   const handleSubmit = async (e) => {
     e.preventDefault(); setLoading(true);
     try {
-      if (product) { await updateProduct(product.id, form); toast.success('Product updated'); }
-      else { await addProduct(form); toast.success('Product added'); }
+      if (product) { await updateProduct(product.id, form); toast.success('Catalog updated'); }
+      else { await addProduct(form); toast.success('Item added to catalog'); }
       onSaved();
     } catch (err) { toast.error(err.message || 'Error saving'); } finally { setLoading(false); }
   };
@@ -19,47 +22,53 @@ function ProductModal({ product, onClose, onSaved }) {
   const CATEGORIES = ['Sofas', 'Dining', 'Bedroom', 'Living Room', 'Storage', 'Seating', 'Outdoor', 'Office'];
 
   return (
-    <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="modal">
+    <motion.div 
+      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+      className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}
+    >
+      <motion.div 
+        initial={{ scale: 0.9, y: 30 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, y: 30 }}
+        className="modal"
+      >
         <div className="modal-header">
-          <h2 className="modal-title">{product ? 'Edit Product' : 'New Product'}</h2>
+          <h2 className="modal-title">{product ? 'Refine Product' : 'Registry Entry'}</h2>
           <button className="btn-icon" onClick={onClose}>✕</button>
         </div>
         <form onSubmit={handleSubmit}>
           <div className="form-grid">
             <div className="form-row">
-              <label className="form-label">Product Name *</label>
-              <input required value={form.name} onChange={e => setForm(p => ({...p, name: e.target.value}))} placeholder="e.g. Oslo Sectional Sofa" />
+              <label className="form-label">Product Moniker *</label>
+              <input required value={form.name} onChange={e => setForm(p => ({...p, name: e.target.value}))} placeholder="e.g. Minimalist Velvet Sofa" />
             </div>
-            <div className="form-grid form-grid-2">
+            <div className="form-grid-2">
               <div className="form-row">
-                <label className="form-label">Category *</label>
+                <label className="form-label">Classification *</label>
                 <select required value={form.category} onChange={e => setForm(p => ({...p, category: e.target.value}))}>
                   <option value="">— Select —</option>
                   {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
                 </select>
               </div>
               <div className="form-row">
-                <label className="form-label">Price *</label>
+                <label className="form-label">Unit Price *</label>
                 <input required type="number" step="0.01" min="0" value={form.price} onChange={e => setForm(p => ({...p, price: e.target.value}))} placeholder="0.00" />
               </div>
             </div>
             <div className="form-row">
-              <label className="form-label">Description</label>
-              <textarea rows={2} value={form.description || ''} onChange={e => setForm(p => ({...p, description: e.target.value}))} placeholder="Product details..." />
+              <label className="form-label">Design Description</label>
+              <textarea rows={2} value={form.description || ''} onChange={e => setForm(p => ({...p, description: e.target.value}))} placeholder="Dimensions, materials..." />
             </div>
             <div className="form-row">
-              <label className="form-label">Stock Quantity</label>
+              <label className="form-label">Inventory Count</label>
               <input type="number" min="0" value={form.stock || 0} onChange={e => setForm(p => ({...p, stock: e.target.value}))} />
             </div>
           </div>
           <div className="modal-footer">
             <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>
-            <button type="submit" className="btn-primary" disabled={loading}>{loading ? 'Saving...' : 'Save Product'}</button>
+            <button type="submit" className="btn-primary" disabled={loading}>{loading ? 'Updating...' : 'Save Design'}</button>
           </div>
         </form>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 }
 
@@ -77,7 +86,6 @@ export default function ProductsPage() {
     try {
       let data = await getProducts();
       
-      // Extract unique categories for filter
       const uniqueCats = [...new Set(data.map(p => p.category))].filter(Boolean);
       setCategories(uniqueCats);
 
@@ -94,72 +102,96 @@ export default function ProductsPage() {
   useEffect(() => { fetchProducts(); }, [fetchProducts]);
 
   const handleDelete = async (id) => {
-    if (!window.confirm('Delete this product?')) return;
-    try { await deleteProduct(id); toast.success('Product deleted'); fetchProducts(); }
-    catch { toast.error('Failed to delete'); }
+    if (!window.confirm('Retire this design from catalog?')) return;
+    try { await deleteProduct(id); toast.success('Entry removed'); fetchProducts(); }
+    catch { toast.error('Failed to remove'); }
   };
 
-  const closeModal = () => { setModal(null); setSelected(null); };
-  const handleSaved = () => { closeModal(); fetchProducts(); };
-
   return (
-    <div>
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
       <div className="page-header">
         <div>
-          <h1 className="page-title">Products</h1>
-          <p className="page-subtitle">{products.length} product{products.length !== 1 ? 's' : ''} in catalog</p>
+          <h1 className="page-title">Curated Collection</h1>
+          <p className="page-subtitle">Refining the furniture catalog for premium spaces.</p>
         </div>
-        <button className="btn-primary" onClick={() => setModal('add')}><Plus size={16} />Add Product</button>
+        <motion.button 
+          whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+          className="btn-primary" onClick={() => setModal('add')}
+        >
+          <Plus size={16} />Register Design
+        </motion.button>
       </div>
 
-      <div className="card">
-        <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1rem', flexWrap: 'wrap', alignItems: 'center' }}>
-          <div className="search-bar">
-            <Search size={15} className="search-icon" />
-            <input placeholder="Search products..." value={search} onChange={e => setSearch(e.target.value)} />
-          </div>
-          <div className="filters">
-            <button className={`filter-chip ${catFilter === 'all' ? 'active' : ''}`} onClick={() => setCatFilter('all')}>All</button>
-            {categories.map(c => (
-              <button key={c} className={`filter-chip ${catFilter === c ? 'active' : ''}`} onClick={() => setCatFilter(c)}>{c}</button>
-            ))}
+      <div className="card" style={{ background: 'transparent', border: 'none', boxShadow: 'none', padding: 0 }}>
+        <div className="card" style={{ marginBottom: '1.5rem' }}>
+          <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'center' }}>
+            <div className="search-bar">
+              <Search size={15} className="search-icon" />
+              <input placeholder="Search catalog..." value={search} onChange={e => setSearch(e.target.value)} />
+            </div>
+            <div className="filters">
+              <button className={`filter-chip ${catFilter === 'all' ? 'active' : ''}`} onClick={() => setCatFilter('all')}>ALL</button>
+              {categories.map(c => (
+                <button key={c} className={`filter-chip ${catFilter === c ? 'active' : ''}`} onClick={() => setCatFilter(c)}>{c.toUpperCase()}</button>
+              ))}
+            </div>
           </div>
         </div>
 
-        {loading ? <div className="loading-center"><div className="spinner"/></div> : products.length === 0 ? (
-          <div className="empty-state"><Package size={40} /><p>No products found</p></div>
+        {loading ? (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1.5rem' }}>
+            {[...Array(6)].map((_, i) => <SkeletonCard key={i} height="200px" />)}
+          </div>
+        ) : products.length === 0 ? (
+          <div className="empty-state"><Package size={40} /><p>Catalogue entry not found</p></div>
         ) : (
-          <div className="table-wrap">
-            <table>
-              <thead><tr><th>Name</th><th>Category</th><th>Price</th><th>Stock</th><th>Description</th><th>Actions</th></tr></thead>
-              <tbody>
-                {products.map(p => (
-                  <tr key={p.id}>
-                    <td style={{ color: 'var(--text)', fontWeight: 500 }}>{p.name}</td>
-                    <td><span className="badge badge-regular">{p.category}</span></td>
-                    <td style={{ color: 'var(--gold)', fontWeight: 600 }}>${Number(p.price).toLocaleString()}</td>
-                    <td>
-                      <span style={{ color: p.stock > 5 ? 'var(--green)' : p.stock > 0 ? 'var(--amber)' : 'var(--red)' }}>
-                        {p.stock} units
-                      </span>
-                    </td>
-                    <td style={{ maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.description || '—'}</td>
-                    <td>
-                      <div style={{ display: 'flex', gap: '0.25rem' }}>
-                        <button className="btn-icon" onClick={() => { setSelected(p); setModal('edit'); }}><Edit2 size={14}/></button>
-                        <button className="btn-icon danger" onClick={() => handleDelete(p.id)}><Trash2 size={14}/></button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1.5rem' }}>
+            <AnimatePresence mode="popLayout">
+              {products.map((p, idx) => (
+                <motion.div 
+                  key={p.id}
+                  layout
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.9 }}
+                  transition={{ delay: idx * 0.05 }}
+                  className="card"
+                  style={{ display: 'flex', flexDirection: 'column', gap: '1rem', border: '1px solid var(--border)' }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                    <div style={{ padding: '8px', borderRadius: '10px', background: 'var(--gold-glow)', color: 'var(--gold)' }}>
+                      <Tag size={16} />
+                    </div>
+                    <div style={{ display: 'flex', gap: '0.25rem' }}>
+                      <button className="btn-icon" onClick={() => { setSelected(p); setModal('edit'); }}><Edit2 size={13}/></button>
+                      <button className="btn-icon danger" onClick={() => handleDelete(p.id)}><Trash2 size={13}/></button>
+                    </div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '0.7rem', color: 'var(--gold)', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', marginBottom: 4 }}>{p.category}</div>
+                    <h3 style={{ fontSize: '1.4rem', color: 'var(--text)', marginBottom: 6 }}>{p.name}</h3>
+                    <p style={{ fontSize: '0.85rem', color: 'var(--text-dim)', height: '40px', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
+                      {p.description || 'No description available for this curated piece.'}
+                    </p>
+                  </div>
+                  <div style={{ marginTop: 'auto', paddingTop: '1rem', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ color: 'var(--gold)', fontWeight: 700, fontSize: '1.2rem' }}>${Number(p.price).toLocaleString()}</div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.75rem', color: p.stock > 0 ? 'var(--green)' : 'var(--red)' }}>
+                      <div style={{ width: 6, height: 6, borderRadius: '50%', background: p.stock > 0 ? 'var(--green)' : 'var(--red)' }} />
+                      {p.stock} Units in Reserve
+                    </div>
+                  </div>
+                </motion.div>
+              ))}
+            </AnimatePresence>
           </div>
         )}
       </div>
 
-      {modal === 'add' && <ProductModal onClose={closeModal} onSaved={handleSaved} />}
-      {modal === 'edit' && <ProductModal product={selected} onClose={closeModal} onSaved={handleSaved} />}
-    </div>
+      <AnimatePresence>
+        {modal === 'add' && <ProductModal onClose={() => setModal(null)} onSaved={() => { setModal(null); fetchProducts(); }} />}
+        {modal === 'edit' && <ProductModal product={selected} onClose={() => { setModal(null); setSelected(null); }} onSaved={() => { setModal(null); setSelected(null); fetchProducts(); }} />}
+      </AnimatePresence>
+    </motion.div>
   );
 }

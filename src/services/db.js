@@ -9,6 +9,7 @@ import {
   query, 
   where, 
   orderBy, 
+  limit,
   serverTimestamp,
   writeBatch
 } from 'firebase/firestore';
@@ -138,7 +139,7 @@ export const deleteOrder = async (id) => {
 
 // -- PRODUCTS --
 export const getProducts = async () => {
-  const q = query(collection(db, 'products'), orderBy('created_at', 'desc'));
+  const q = query(collection(db, 'products'), orderBy('created_at', 'desc'), limit(100));
   const snap = await getDocs(q);
   return snap.docs.map(d => ({ id: d.id, ...d.data() }));
 };
@@ -162,8 +163,11 @@ export const deleteProduct = async (id) => {
 
 // -- DASHBOARD --
 export const getDashboardStats = async () => {
-  const customers = await getCustomers();
-  const orders = await getOrders();
+  // Fetch both primary collections in parallel
+  const [customers, orders] = await Promise.all([
+    getCustomers(),
+    getOrders()
+  ]);
   
   const stats = {
     totalCustomers: customers.length,

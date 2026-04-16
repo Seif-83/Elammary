@@ -1,66 +1,54 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Link } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 import { getCustomers, addCustomer, updateCustomer, deleteCustomer } from '../services/db';
 import toast from 'react-hot-toast';
-import { Plus, Search, Edit2, Trash2, Eye, Crown, Star, User } from 'lucide-react';
-
-const TIERS = ['all', 'vip', 'loyal', 'regular'];
+import { Plus, Search, Edit2, Trash2, User, Phone, MapPin } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { SkeletonTable } from '../components/ui/Skeleton';
 
 function CustomerModal({ customer, onClose, onSaved }) {
-  const [form, setForm] = useState(customer || { name: '', phone: '', address: '', notes: '', tier: 'regular' });
+  const [form, setForm] = useState(customer || { name: '', phone: '', address: '', notes: '' });
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
+    e.preventDefault(); setLoading(true);
     try {
-      if (customer) {
-        await updateCustomer(customer.id, form);
-        toast.success('Customer updated');
-      } else {
-        await addCustomer(form);
-        toast.success('Customer added');
-      }
+      if (customer) { await updateCustomer(customer.id, form); toast.success('Profile updated'); }
+      else { await addCustomer(form); toast.success('Customer added'); }
       onSaved();
-    } catch (err) {
-      toast.error(err.message || 'Error saving customer');
-    } finally { setLoading(false); }
+    } catch (err) { toast.error(err.message || 'Error saving'); } finally { setLoading(false); }
   };
 
   return (
-    <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="modal">
+    <motion.div 
+      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+      className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}
+    >
+      <motion.div 
+        initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, y: 20 }}
+        className="modal"
+      >
         <div className="modal-header">
-          <h2 className="modal-title">{customer ? 'Edit Customer' : 'New Customer'}</h2>
+          <h2 className="modal-title">{customer ? 'Edit Profile' : 'New Customer'}</h2>
           <button className="btn-icon" onClick={onClose}>✕</button>
         </div>
         <form onSubmit={handleSubmit}>
           <div className="form-grid">
-            <div className="form-grid form-grid-2">
-              <div className="form-row">
-                <label className="form-label">Full Name *</label>
-                <input required value={form.name} onChange={e => setForm(p => ({...p, name: e.target.value}))} placeholder="e.g. Ahmed Hassan" />
-              </div>
-              <div className="form-row">
-                <label className="form-label">Phone</label>
-                <input value={form.phone || ''} onChange={e => setForm(p => ({...p, phone: e.target.value}))} placeholder="+20 100 000 0000" />
-              </div>
+            <div className="form-row">
+              <label className="form-label">Full Name *</label>
+              <input required value={form.name} onChange={e => setForm(p => ({...p, name: e.target.value}))} placeholder="e.g. John Doe" />
             </div>
             <div className="form-row">
-              <label className="form-label">Address</label>
-              <input value={form.address || ''} onChange={e => setForm(p => ({...p, address: e.target.value}))} placeholder="Street, City" />
+              <label className="form-label">Phone Number</label>
+              <input value={form.phone} onChange={e => setForm(p => ({...p, phone: e.target.value}))} placeholder="+1 (555) 000-0000" />
             </div>
             <div className="form-row">
-              <label className="form-label">Notes</label>
-              <textarea rows={3} value={form.notes || ''} onChange={e => setForm(p => ({...p, notes: e.target.value}))} placeholder="Customer preferences, special notes..." />
+              <label className="form-label">Physical Address</label>
+              <textarea rows={2} value={form.address} onChange={e => setForm(p => ({...p, address: e.target.value}))} placeholder="Shipping details..." />
             </div>
             <div className="form-row">
-              <label className="form-label">Tier</label>
-              <select value={form.tier} onChange={e => setForm(p => ({...p, tier: e.target.value}))}>
-                <option value="regular">Regular</option>
-                <option value="loyal">Loyal</option>
-                <option value="vip">VIP</option>
-              </select>
+              <label className="form-label">Private Notes</label>
+              <textarea rows={2} value={form.notes} onChange={e => setForm(p => ({...p, notes: e.target.value}))} placeholder="Special preferences..." />
             </div>
           </div>
           <div className="modal-footer">
@@ -68,39 +56,9 @@ function CustomerModal({ customer, onClose, onSaved }) {
             <button type="submit" className="btn-primary" disabled={loading}>{loading ? 'Saving...' : 'Save Customer'}</button>
           </div>
         </form>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
-}
-
-function DeleteModal({ customer, onClose, onDeleted }) {
-  const [loading, setLoading] = useState(false);
-  const handleDelete = async () => {
-    setLoading(true);
-    try {
-      await deleteCustomer(customer.id);
-      toast.success('Customer deleted');
-      onDeleted();
-    } catch { toast.error('Failed to delete'); } finally { setLoading(false); }
-  };
-  return (
-    <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="modal" style={{ maxWidth: 420 }}>
-        <div className="modal-header"><h2 className="modal-title">Delete Customer</h2><button className="btn-icon" onClick={onClose}>✕</button></div>
-        <p style={{ color: 'var(--text2)', fontSize: '0.9rem' }}>Are you sure you want to delete <strong style={{ color: 'var(--text)' }}>{customer.name}</strong>? This will also delete all their orders.</p>
-        <div className="modal-footer">
-          <button className="btn-secondary" onClick={onClose}>Cancel</button>
-          <button className="btn-danger" onClick={handleDelete} disabled={loading}>{loading ? 'Deleting...' : 'Delete'}</button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function TierIcon({ tier }) {
-  if (tier === 'vip') return <Crown size={13} />;
-  if (tier === 'loyal') return <Star size={13} />;
-  return <User size={13} />;
 }
 
 export default function CustomersPage() {
@@ -108,83 +66,125 @@ export default function CustomersPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [tierFilter, setTierFilter] = useState('all');
-  const [modal, setModal] = useState(null); // null | 'add' | 'edit' | 'delete'
+  const [modal, setModal] = useState(null);
   const [selected, setSelected] = useState(null);
 
   const fetchCustomers = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await getCustomers(search, tierFilter === 'all' ? '' : tierFilter);
+      let data = await getCustomers();
+      if (tierFilter !== 'all') data = data.filter(c => c.tier === tierFilter);
+      if (search) {
+        const s = search.toLowerCase();
+        data = data.filter(c => c.name?.toLowerCase().includes(s) || c.phone?.includes(s));
+      }
       setCustomers(data || []);
     } catch { toast.error('Failed to load customers'); } finally { setLoading(false); }
   }, [search, tierFilter]);
 
   useEffect(() => { fetchCustomers(); }, [fetchCustomers]);
 
-  const openEdit = (c) => { setSelected(c); setModal('edit'); };
-  const openDelete = (c) => { setSelected(c); setModal('delete'); };
+  const handleDelete = async (id) => {
+    if (!window.confirm('This will delete the customer and all their orders. Continue?')) return;
+    try { await deleteCustomer(id); toast.success('Customer removed'); fetchCustomers(); }
+    catch { toast.error('Failed to delete'); }
+  };
+
   const closeModal = () => { setModal(null); setSelected(null); };
   const handleSaved = () => { closeModal(); fetchCustomers(); };
 
   return (
-    <div>
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
       <div className="page-header">
         <div>
-          <h1 className="page-title">Customers</h1>
-          <p className="page-subtitle">{customers.length} customer{customers.length !== 1 ? 's' : ''} found</p>
+          <h1 className="page-title">Client Directory</h1>
+          <p className="page-subtitle">Manage your high-value client relationships.</p>
         </div>
-        <button className="btn-primary" onClick={() => setModal('add')}><Plus size={16} />Add Customer</button>
+        <motion.button 
+          whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+          className="btn-primary" onClick={() => setModal('add')}
+        >
+          <Plus size={16} />Add Client
+        </motion.button>
       </div>
 
       <div className="card">
-        <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1rem', flexWrap: 'wrap', alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
           <div className="search-bar">
             <Search size={15} className="search-icon" />
-            <input placeholder="Search by name or phone..." value={search} onChange={e => setSearch(e.target.value)} />
+            <input placeholder="Search clients..." value={search} onChange={e => setSearch(e.target.value)} />
           </div>
           <div className="filters">
-            {TIERS.map(t => (
+            {['all', 'vip', 'loyal', 'regular'].map(t => (
               <button key={t} className={`filter-chip ${tierFilter === t ? 'active' : ''}`} onClick={() => setTierFilter(t)}>
-                {t === 'all' ? 'All' : t.charAt(0).toUpperCase() + t.slice(1)}
+                {t.toUpperCase()}
               </button>
             ))}
           </div>
         </div>
 
-        {loading ? <div className="loading-center"><div className="spinner"/></div> : customers.length === 0 ? (
-          <div className="empty-state"><User size={40} /><p>No customers found</p></div>
+        {loading ? (
+          <SkeletonTable rows={8} />
+        ) : customers.length === 0 ? (
+          <div className="empty-state"><User size={40} /><p>No clients found matching your criteria</p></div>
         ) : (
           <div className="table-wrap">
             <table>
               <thead>
-                <tr><th>Customer</th><th>Phone</th><th>Address</th><th>Tier</th><th>Total Purchases</th><th>Actions</th></tr>
+                <tr>
+                  <th>Client Name</th>
+                  <th>Tier Status</th>
+                  <th>Phone / Contact</th>
+                  <th>Lifetime Value</th>
+                  <th>Actions</th>
+                </tr>
               </thead>
               <tbody>
-                {customers.map(c => (
-                  <tr key={c.id}>
-                    <td style={{ color: 'var(--text)', fontWeight: 500 }}>{c.name}</td>
-                    <td>{c.phone || '—'}</td>
-                    <td style={{ maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.address || '—'}</td>
-                    <td><span className={`badge badge-${c.tier}`}><TierIcon tier={c.tier} />{c.tier}</span></td>
-                    <td style={{ color: 'var(--gold)', fontWeight: 600 }}>${Number(c.total_purchases).toLocaleString()}</td>
-                    <td>
-                      <div style={{ display: 'flex', gap: '0.25rem' }}>
-                        <Link to={`/customers/${c.id}`}><button className="btn-icon" title="View"><Eye size={15}/></button></Link>
-                        <button className="btn-icon" title="Edit" onClick={() => openEdit(c)}><Edit2 size={15}/></button>
-                        <button className="btn-icon danger" title="Delete" onClick={() => openDelete(c)}><Trash2 size={15}/></button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                <AnimatePresence mode="popLayout">
+                  {customers.map((c, idx) => (
+                    <motion.tr 
+                      key={c.id}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, x: -20 }}
+                      transition={{ delay: idx * 0.05 }}
+                    >
+                      <td style={{ fontWeight: 600 }}>
+                        <Link to={`/customers/${c.id}`} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                          <div style={{ width: 32, height: 32, borderRadius: 8, background: 'var(--bg-glass)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--gold)', border: '1px solid var(--border)' }}>
+                            {c.name[0]}
+                          </div>
+                          {c.name}
+                        </Link>
+                      </td>
+                      <td><span className={`badge badge-${c.tier}`}>{c.tier}</span></td>
+                      <td>
+                        <div style={{ display: 'flex', flexDirection: 'column' }}>
+                          <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><Phone size={12} /> {c.phone || '—'}</span>
+                        </div>
+                      </td>
+                      <td>
+                        <div style={{ color: 'var(--gold)', fontWeight: 700 }}>${Number(c.total_purchases || 0).toLocaleString()}</div>
+                      </td>
+                      <td>
+                        <div style={{ display: 'flex', gap: '0.25rem' }}>
+                          <button className="btn-icon" onClick={() => { setSelected(c); setModal('edit'); }}><Edit2 size={14}/></button>
+                          <button className="btn-icon danger" onClick={() => handleDelete(c.id)}><Trash2 size={14}/></button>
+                        </div>
+                      </td>
+                    </motion.tr>
+                  ))}
+                </AnimatePresence>
               </tbody>
             </table>
           </div>
         )}
       </div>
 
-      {modal === 'add' && <CustomerModal onClose={closeModal} onSaved={handleSaved} />}
-      {modal === 'edit' && <CustomerModal customer={selected} onClose={closeModal} onSaved={handleSaved} />}
-      {modal === 'delete' && <DeleteModal customer={selected} onClose={closeModal} onDeleted={handleSaved} />}
-    </div>
+      <AnimatePresence>
+        {modal === 'add' && <CustomerModal onClose={closeModal} onSaved={handleSaved} />}
+        {modal === 'edit' && <CustomerModal customer={selected} onClose={closeModal} onSaved={handleSaved} />}
+      </AnimatePresence>
+    </motion.div>
   );
 }
