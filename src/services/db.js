@@ -14,6 +14,7 @@ import {
   writeBatch
 } from 'firebase/firestore';
 import { db } from '../firebase';
+import toast from 'react-hot-toast';
 
 // Helper: Calculate Tier
 export const calcTier = (total) => {
@@ -62,8 +63,6 @@ export const getCustomerDetail = async (id) => {
   
   return { ...customer, orders };
 };
-
-import toast from 'react-hot-toast';
 
 const withTimeout = (promise, ms = 8000) => {
   return Promise.race([
